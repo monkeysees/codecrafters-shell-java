@@ -12,7 +12,11 @@ public class Main {
                 scanner.close();
                 System.exit(0);
             }
-            System.out.println(String.format("%s: command not found", command));
+            if (command.equals("echo")) {
+                System.out.println(commandArg);
+            } else {
+                System.out.println(String.format("%s: command not found", command));
+            }
         }
     }
 }
