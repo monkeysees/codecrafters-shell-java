@@ -1,5 +1,6 @@
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -57,7 +58,22 @@ public class Main {
 
                     break;
                 default:
-                    System.out.println(String.format("%s: command not found", command));
+                    String commandPath = getExecAbsolutePath(command);
+                    if (commandPath != null) {
+                        List<String> programToRun = new ArrayList<>();
+                        programToRun.add(command);
+                        if (!commandArg.isBlank()) {
+                            programToRun.addAll(Arrays.asList(commandArg.split(" ")));
+                        }
+                        ProcessBuilder processBuilder = new ProcessBuilder(programToRun);
+                        processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+                        processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+                        processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+                        Process process = processBuilder.start();
+                        process.waitFor();
+                    } else {
+                        System.out.println(String.format("%s: command not found", command));
+                    }
             }
         }
     }
