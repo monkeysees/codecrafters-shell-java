@@ -1,8 +1,24 @@
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    static String EXEC_PATHS = System.getenv("PATH");
+    static String[] DIRS_WITH_EXECS = (EXEC_PATHS != null && !EXEC_PATHS.isEmpty())
+            ? EXEC_PATHS.split(":")
+            : new String[] {};
+
+    private static String getExecAbsolutePath(String execName) {
+        for (String dirPath : DIRS_WITH_EXECS) {
+            File exec = new File(dirPath, execName);
+            if (exec.exists()) {
+                return exec.getAbsolutePath();
+            }
+        }
+        return null;
+    }
+
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -31,7 +47,12 @@ public class Main {
                     if (knownBuiltinCommands.contains(commandArg)) {
                         System.out.println(String.format("%s is a shell builtin", commandArg));
                     } else {
-                        System.out.println(String.format("%s: not found", commandArg));
+                        String commandPath = getExecAbsolutePath(commandArg);
+                        if (commandPath != null) {
+                            System.out.println(String.format("%s is %s", commandArg, commandPath));
+                        } else {
+                            System.out.println(String.format("%s: not found", commandArg));
+                        }
                     }
 
                     break;
