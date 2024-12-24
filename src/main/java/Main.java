@@ -1,23 +1,69 @@
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-    static String EXEC_PATHS = System.getenv("PATH");
-    static String[] DIRS_WITH_EXECS = (EXEC_PATHS != null && !EXEC_PATHS.isEmpty())
-            ? EXEC_PATHS.split(":")
-            : new String[] {};
+    private static class Program {
+        static final String PATH = System.getenv("PATH");
+        static final String[] DIRS = (PATH != null && !PATH.isEmpty())
+                ? PATH.split(":")
+                : new String[] {};
+        private final String name;
 
-    private static String getExecAbsolutePath(String execName) {
-        for (String dirPath : DIRS_WITH_EXECS) {
-            File exec = new File(dirPath, execName);
-            if (exec.exists()) {
-                return exec.getAbsolutePath();
+        static String getAbsolutePath(String programName) {
+            for (String dirPath : DIRS) {
+                File program = new File(dirPath, programName);
+                if (program.exists()) {
+                    return program.getAbsolutePath();
+                }
+            }
+            return null;
+        }
+
+        static String[] parseArgs(String args) {
+            if (!args.isBlank()) {
+                return args.split(" ");
+            } else {
+                return new String[0];
             }
         }
-        return null;
+
+        Program(String name) {
+            String programPath = getAbsolutePath(name);
+            if (programPath == null) {
+                throw new IllegalArgumentException(String.format("The program %s is not available via PATH.", name));
+            }
+            this.name = name;
+        }
+
+        void run(String[] args) {
+            List<String> programArgs = Arrays.stream(args)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            List<String> processArgs = new ArrayList<>();
+            processArgs.add(this.name);
+            processArgs.addAll(programArgs);
+            ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
+            processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+            processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+            Process process;
+            try {
+                process = processBuilder.start();
+                process.waitFor();
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            } catch (InterruptedException e) {
+                System.out.println(String.format(
+                        "Error while running program %s.\n%s",
+                        this.name,
+                        e.getMessage()));
+            }
+        }
+
     }
 
     public static void main(String[] args) throws Exception {
@@ -26,18 +72,17 @@ public class Main {
             System.out.print("$ ");
             String[] input = scanner.nextLine().split(" ", 2);
             String command = input[0];
-            String commandArg = (input.length > 1) ? input[1] : "";
+            String commandArgs = (input.length > 1) ? input[1] : "";
             switch (command) {
                 case "exit":
-                    if (commandArg.equals("0")) {
+                    if (commandArgs.equals("0")) {
                         scanner.close();
                         System.exit(0);
-
                     } else {
                         break;
                     }
                 case "echo":
-                    System.out.println(commandArg);
+                    System.out.println(commandArgs);
                     break;
                 case "type":
                     List<String> knownBuiltinCommands = new ArrayList<>();
@@ -45,33 +90,24 @@ public class Main {
                     knownBuiltinCommands.add("echo");
                     knownBuiltinCommands.add("type");
 
-                    if (knownBuiltinCommands.contains(commandArg)) {
-                        System.out.println(String.format("%s is a shell builtin", commandArg));
+                    if (knownBuiltinCommands.contains(commandArgs)) {
+                        System.out.println(String.format("%s is a shell builtin", commandArgs));
                     } else {
-                        String commandPath = getExecAbsolutePath(commandArg);
+                        String commandPath = Program.getAbsolutePath(commandArgs);
                         if (commandPath != null) {
-                            System.out.println(String.format("%s is %s", commandArg, commandPath));
+                            System.out.println(String.format("%s is %s", commandArgs, commandPath));
                         } else {
-                            System.out.println(String.format("%s: not found", commandArg));
+                            System.out.println(String.format("%s: not found", commandArgs));
                         }
                     }
 
                     break;
                 default:
-                    String commandPath = getExecAbsolutePath(command);
-                    if (commandPath != null) {
-                        List<String> programToRun = new ArrayList<>();
-                        programToRun.add(command);
-                        if (!commandArg.isBlank()) {
-                            programToRun.addAll(Arrays.asList(commandArg.split(" ")));
-                        }
-                        ProcessBuilder processBuilder = new ProcessBuilder(programToRun);
-                        processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
-                        processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-                        processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
-                        Process process = processBuilder.start();
-                        process.waitFor();
-                    } else {
+                    try {
+                        Program program = new Program(command);
+                        String[] programArgs = Program.parseArgs(commandArgs);
+                        program.run(programArgs);
+                    } catch (IllegalArgumentException e) {
                         System.out.println(String.format("%s: command not found", command));
                     }
             }
