@@ -55,9 +55,9 @@ public class Main {
                 process = processBuilder.start();
                 process.waitFor();
             } catch (IOException e) {
-                System.out.println(e.getMessage());
+                System.err.println(e.getMessage());
             } catch (InterruptedException e) {
-                System.out.println(String.format(
+                System.err.println(String.format(
                         "Error while running program %s.\n%s",
                         this.name,
                         e.getMessage()));
@@ -97,7 +97,7 @@ public class Main {
                         if (commandPath != null) {
                             System.out.println(String.format("%s is %s", commandArgs, commandPath));
                         } else {
-                            System.out.println(String.format("%s: not found", commandArgs));
+                            System.err.println(String.format("%s: not found", commandArgs));
                         }
                     }
 
@@ -108,7 +108,7 @@ public class Main {
                         String[] programArgs = Program.parseArgs(commandArgs);
                         program.run(programArgs);
                     } catch (IllegalArgumentException e) {
-                        System.out.println(String.format("%s: command not found", command));
+                        System.err.println(String.format("%s: command not found", command));
                     }
             }
         }
