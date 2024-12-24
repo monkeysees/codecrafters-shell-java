@@ -89,6 +89,7 @@ public class Main {
                     knownBuiltinCommands.add("exit");
                     knownBuiltinCommands.add("echo");
                     knownBuiltinCommands.add("type");
+                    knownBuiltinCommands.add("pwd");
 
                     if (knownBuiltinCommands.contains(commandArgs)) {
                         System.out.println(String.format("%s is a shell builtin", commandArgs));
@@ -100,7 +101,13 @@ public class Main {
                             System.err.println(String.format("%s: not found", commandArgs));
                         }
                     }
-
+                    break;
+                case "pwd":
+                    if (commandArgs.isEmpty()) {
+                        System.out.println(System.getProperty("user.dir"));
+                    } else {
+                        System.err.println("pwd: too many arguments");
+                    }
                     break;
                 default:
                     try {
