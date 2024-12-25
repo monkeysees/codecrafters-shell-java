@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    static String cwd = System.getProperty("user.dir");
+
     private static class Program {
         static final String PATH = System.getenv("PATH");
         static final String[] DIRS = (PATH != null && !PATH.isEmpty())
@@ -90,6 +92,7 @@ public class Main {
                     knownBuiltinCommands.add("echo");
                     knownBuiltinCommands.add("type");
                     knownBuiltinCommands.add("pwd");
+                    knownBuiltinCommands.add("cd");
 
                     if (knownBuiltinCommands.contains(commandArgs)) {
                         System.out.println(String.format("%s is a shell builtin", commandArgs));
@@ -104,10 +107,25 @@ public class Main {
                     break;
                 case "pwd":
                     if (commandArgs.isEmpty()) {
-                        System.out.println(System.getProperty("user.dir"));
+                        System.out.println(cwd);
                     } else {
                         System.err.println("pwd: too many arguments");
                     }
+                    break;
+                case "cd":
+                    if (commandArgs.isEmpty()) {
+                        break;
+                    }
+                    File newLocation = new File(commandArgs);
+                    if (newLocation == null || !newLocation.exists()) {
+                        System.err.println(String.format("cd: %s: No such file or directory", commandArgs));
+                        break;
+                    } 
+                    if (!newLocation.isDirectory()) {
+                        System.err.println(String.format("cd: %s: Not a directory", commandArgs));
+                        break;
+                    }
+                    cwd = commandArgs;
                     break;
                 default:
                     try {
