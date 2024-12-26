@@ -6,7 +6,18 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-    static String cwd = System.getProperty("user.dir");
+    static File cwd = new File(System.getProperty("user.dir"));
+
+    static void setCwd(String cwd) {
+        File newLocation = new File(cwd);
+        if (!newLocation.exists()) {
+            throw new IllegalArgumentException("No such file or directory");
+        }
+        if (!newLocation.isDirectory()) {
+            throw new IllegalArgumentException("Not a directory");
+        }
+        Main.cwd = newLocation;
+    }
 
     private static class Program {
         static final String PATH = System.getenv("PATH");
@@ -125,7 +136,11 @@ public class Main {
                         System.err.println(String.format("cd: %s: Not a directory", commandArgs));
                         break;
                     }
-                    cwd = commandArgs;
+                    try {
+                        setCwd(commandArgs);    
+                    } catch (IllegalArgumentException e) {
+                        System.err.println(String.format("cd: %s: %s", commandArgs, e.getMessage()));
+                    }
                     break;
                 default:
                     try {
