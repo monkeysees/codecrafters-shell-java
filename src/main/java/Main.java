@@ -117,7 +117,7 @@ public class Main {
                         break;
                     }
                     File newLocation = new File(commandArgs);
-                    if (newLocation == null || !newLocation.exists()) {
+                    if (!newLocation.exists()) {
                         System.err.println(String.format("cd: %s: No such file or directory", commandArgs));
                         break;
                     } 
