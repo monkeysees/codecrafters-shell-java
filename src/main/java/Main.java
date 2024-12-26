@@ -60,6 +60,7 @@ public class Main {
             processArgs.add(this.name);
             processArgs.addAll(programArgs);
             ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
+            processBuilder.directory(cwd);
             processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
             processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
