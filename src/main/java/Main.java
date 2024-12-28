@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    static final String HOME_DIR = System.getenv("HOME");
+
     static File cwd = new File(System.getProperty("user.dir"));
 
     static Boolean isLocalPath(String path) {
@@ -21,13 +23,20 @@ public class Main {
         }
     }
 
-    static void setCwd(String cwd) {
+    static String normalizePath(String path) {
+        return path.equals("~") || path.startsWith("~/")
+            ? path.replaceFirst("~", HOME_DIR)
+            : path;
+    }
+
+    static void setCwd(String path) {
+        String normalizedPath = normalizePath(path);
         File newLocation;
-        if (isLocalPath(cwd)) {
+        if (isLocalPath(normalizedPath)) {
             newLocation = Main.cwd;
-            String[] pathParts = cwd.contains("/")
-                ? cwd.split("/")
-                : new String[] {".", cwd};
+            String[] pathParts = normalizedPath.contains("/")
+                ? normalizedPath.split("/")
+                : new String[] {".", normalizedPath};
             for (String pathPart : pathParts) {
                 newLocation = switch (pathPart) {
                     case "." -> newLocation;
@@ -37,7 +46,7 @@ public class Main {
                 ensureDirectory(newLocation);
             }
         } else {
-            newLocation = new File(cwd);
+            newLocation = new File(normalizedPath);
             ensureDirectory(newLocation);
         }
         Main.cwd = newLocation;
