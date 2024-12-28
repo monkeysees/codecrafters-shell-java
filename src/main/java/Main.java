@@ -8,13 +8,37 @@ import java.util.Scanner;
 public class Main {
     static File cwd = new File(System.getProperty("user.dir"));
 
-    static void setCwd(String cwd) {
-        File newLocation = new File(cwd);
-        if (!newLocation.exists()) {
+    static Boolean isLocalPath(String path) {
+        return path.startsWith(".") || !path.contains("/");
+    }
+
+    static void ensureDirectory(File dir) {
+        if (!dir.exists()) {
             throw new IllegalArgumentException("No such file or directory");
         }
-        if (!newLocation.isDirectory()) {
+        if (!dir.isDirectory()) {
             throw new IllegalArgumentException("Not a directory");
+        }
+    }
+
+    static void setCwd(String cwd) {
+        File newLocation;
+        if (isLocalPath(cwd)) {
+            newLocation = Main.cwd;
+            String[] pathParts = cwd.contains("/")
+                ? cwd.split("/")
+                : new String[] {".", cwd};
+            for (String pathPart : pathParts) {
+                newLocation = switch (pathPart) {
+                    case "." -> newLocation;
+                    case ".." -> newLocation.getParentFile();
+                    default -> new File(newLocation, pathPart);
+                };
+                ensureDirectory(newLocation);
+            }
+        } else {
+            newLocation = new File(cwd);
+            ensureDirectory(newLocation);
         }
         Main.cwd = newLocation;
     }
@@ -128,17 +152,8 @@ public class Main {
                     if (commandArgs.isEmpty()) {
                         break;
                     }
-                    File newLocation = new File(commandArgs);
-                    if (!newLocation.exists()) {
-                        System.err.println(String.format("cd: %s: No such file or directory", commandArgs));
-                        break;
-                    } 
-                    if (!newLocation.isDirectory()) {
-                        System.err.println(String.format("cd: %s: Not a directory", commandArgs));
-                        break;
-                    }
                     try {
-                        setCwd(commandArgs);    
+                        setCwd(commandArgs);
                     } catch (IllegalArgumentException e) {
                         System.err.println(String.format("cd: %s: %s", commandArgs, e.getMessage()));
                     }
