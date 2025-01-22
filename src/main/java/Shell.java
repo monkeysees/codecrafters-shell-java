@@ -86,8 +86,20 @@ public class Shell {
         StringBuilder currentArg = new StringBuilder();
         Boolean insideSingleQuotes = false;
         Boolean insideDoubleQuotes = false;
+        Boolean isBackslashed = false;
 
         for (Character c : args.toCharArray()) {
+            if (isBackslashed) {
+                currentArg.append(c);
+                isBackslashed = false;
+                continue;
+            }
+
+            if (c == '\\' && !insideSingleQuotes && !insideDoubleQuotes) {
+                isBackslashed = true;
+                continue;
+            }
+
             if (c == '\'' && !insideDoubleQuotes) {
                 insideSingleQuotes = !insideSingleQuotes;
                 continue;
