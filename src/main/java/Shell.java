@@ -85,14 +85,20 @@ public class Shell {
         List<String> parsedArgs = new ArrayList<String>();
         StringBuilder currentArg = new StringBuilder();
         Boolean insideSingleQuotes = false;
+        Boolean insideDoubleQuotes = false;
 
         for (Character c : args.toCharArray()) {
-            if (c == '\'') {
+            if (c == '\'' && !insideDoubleQuotes) {
                 insideSingleQuotes = !insideSingleQuotes;
                 continue;
             }
 
-            if (Character.isWhitespace(c) && !insideSingleQuotes) {
+            if (c == '\"' && !insideSingleQuotes) {
+                insideDoubleQuotes = !insideDoubleQuotes;
+                continue;
+            }
+
+            if (Character.isWhitespace(c) && !insideSingleQuotes && !insideDoubleQuotes) {
                 if (currentArg.length() > 0) {
                     parsedArgs.add(currentArg.toString());
                     currentArg = new StringBuilder();
