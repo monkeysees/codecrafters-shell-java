@@ -1,4 +1,6 @@
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Shell {
@@ -16,9 +18,11 @@ public class Shell {
         scanner = new Scanner(System.in);
         while (true) {
             System.out.print("$ ");
-            String[] input = scanner.nextLine().split(" ", 2);
-            String command = input[0];
-            String commandArgs = (input.length > 1) ? input[1] : "";
+            List<String> input = parseArguments(scanner.nextLine());
+            String command = input.get(0);
+            List<String> commandArgs = input.size() > 1
+                ? input.subList(1, input.size())
+                : new ArrayList<String>();
             Program program;
             try {
                 program = (BuiltinCommand.isBuiltin(command))
@@ -75,5 +79,33 @@ public class Shell {
         if (!dir.isDirectory()) {
             throw new IllegalArgumentException("Not a directory");
         }
+    }
+
+    static List<String> parseArguments(String args) {
+        List<String> parsedArgs = new ArrayList<String>();
+        StringBuilder currentArg = new StringBuilder();
+        Boolean insideSingleQuotes = false;
+
+        for (Character c : args.toCharArray()) {
+            if (c == '\'') {
+                insideSingleQuotes = !insideSingleQuotes;
+                continue;
+            }
+
+            if (Character.isWhitespace(c) && !insideSingleQuotes) {
+                if (currentArg.length() > 0) {
+                    parsedArgs.add(currentArg.toString());
+                    currentArg = new StringBuilder();
+                }
+                continue;
+            }
+
+            currentArg.append(c);
+        }
+        if (currentArg.length() > 0) {
+            parsedArgs.add(currentArg.toString());
+        }
+
+        return parsedArgs;
     }
 }

@@ -1,11 +1,12 @@
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public enum BuiltinCommand implements Program {
     EXIT("exit") {
         @Override
-        public ExecutionResult execute(Shell shell, String args) {
-            if (args.equals("0")) {
+        public ExecutionResult execute(Shell shell, List<String> args) {
+            if (args.get(0).equals("0")) {
                 shell.scanner.close();
                 System.exit(0);
             }
@@ -14,14 +15,14 @@ public enum BuiltinCommand implements Program {
     },
     ECHO("echo") {
         @Override
-        public ExecutionResult execute(Shell shell, String args) {
-            System.out.println(args);
+        public ExecutionResult execute(Shell shell, List<String> args) {
+            System.out.println(String.join(" ", args));
             return new ExecutionResult();
         }
     },
     PWD("pwd") {
         @Override
-        public ExecutionResult execute(Shell shell, String args) {
+        public ExecutionResult execute(Shell shell, List<String> args) {
             if (args.isEmpty()) {
                 System.out.println(shell.cwd);
                 return new ExecutionResult();
@@ -32,12 +33,16 @@ public enum BuiltinCommand implements Program {
     },
     CD("cd") {
         @Override
-        public ExecutionResult execute(Shell shell, String args) {
+        public ExecutionResult execute(Shell shell, List<String> args) {
+            if (args.size() > 1) {
+                return new ExecutionError("cd: Only one argument is allowed");
+            }
+
             if (!args.isEmpty()) {
                 try {
-                    shell.changeDirectory(args);
+                    shell.changeDirectory(args.get(0));
                 } catch (IllegalArgumentException e) {
-                    return new ExecutionError(String.format("cd: %s: %s", args, e.getMessage()));
+                    return new ExecutionError(String.format("cd: %s: %s", args.get(0), e.getMessage()));
                 }
             }
             return new ExecutionResult();
@@ -45,22 +50,24 @@ public enum BuiltinCommand implements Program {
     },
     TYPE("type") {
         @Override
-        public ExecutionResult execute(Shell shell, String args) {
-            if (isBuiltin(args)) {
-                System.out.println(String.format("%s is a shell builtin", args));
-            } else {
-                String path = Executable.findProgramPath(args);
-                if (path != null) {
-                    System.out.println(String.format("%s is %s", args, path));
+        public ExecutionResult execute(Shell shell, List<String> args) {
+            for (String arg : args) {
+                if (isBuiltin(arg)) {
+                    System.out.println(String.format("%s is a shell builtin", arg));
                 } else {
-                    return new ExecutionError(String.format("%s: not found", args));
+                    String path = Executable.findProgramPath(arg);
+                    if (path != null) {
+                        System.out.println(String.format("%s is %s", arg, path));
+                    } else {
+                        return new ExecutionError(String.format("%s: not found", arg));
+                    }
                 }
             }
             return new ExecutionResult();
         }
     };
 
-    public abstract ExecutionResult execute(Shell shell, String args);
+    public abstract ExecutionResult execute(Shell shell, List<String> args);
 
     final String name;
 

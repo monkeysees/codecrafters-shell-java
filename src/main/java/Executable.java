@@ -1,7 +1,6 @@
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Executable implements Program {
@@ -19,13 +18,10 @@ public class Executable implements Program {
         this.name = name;
     }
 
-    public ExecutionResult execute(Shell shell, String args) {
-        List<String> programArgs = Arrays.stream(parseArgs(args))
-                .filter(s -> !s.isEmpty())
-                .toList();
+    public ExecutionResult execute(Shell shell, List<String> args) {
         List<String> processArgs = new ArrayList<>();
         processArgs.add(this.name);
-        processArgs.addAll(programArgs);
+        processArgs.addAll(args);
         ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
         processBuilder.directory(shell.cwd);
         processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
@@ -54,13 +50,4 @@ public class Executable implements Program {
         }
         return null;
     }
-
-    static String[] parseArgs(String args) {
-        if (!args.isBlank()) {
-            return args.split(" ");
-        } else {
-            return new String[0];
-        }
-    }
-
 }
