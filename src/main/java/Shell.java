@@ -2,6 +2,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 
 public class Shell {
     File cwd;
@@ -87,15 +88,19 @@ public class Shell {
         Boolean insideSingleQuotes = false;
         Boolean insideDoubleQuotes = false;
         Boolean isBackslashed = false;
+        Set<Character> specialDoubleQuotesCharacters = Set.of('\\', '$', '"', '\n');
 
         for (Character c : args.toCharArray()) {
             if (isBackslashed) {
+                if (insideDoubleQuotes && !specialDoubleQuotesCharacters.contains(c)) {
+                    currentArg.append('\\');
+                }
                 currentArg.append(c);
                 isBackslashed = false;
                 continue;
             }
 
-            if (c == '\\' && !insideSingleQuotes && !insideDoubleQuotes) {
+            if (c == '\\' && !insideSingleQuotes) {
                 isBackslashed = true;
                 continue;
             }
