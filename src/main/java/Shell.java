@@ -7,7 +7,6 @@ import java.util.Set;
 public class Shell {
     File cwd;
     String homeDir;
-    String dirsWithExecutables;
     Scanner scanner;
 
     Shell() {
@@ -23,7 +22,7 @@ public class Shell {
             String command = input.get(0);
             List<String> commandArgs = input.size() > 1
                 ? input.subList(1, input.size())
-                : new ArrayList<String>();
+                : new ArrayList<>();
             Program program;
             try {
                 program = (BuiltinCommand.isBuiltin(command))
@@ -34,8 +33,8 @@ public class Shell {
                 continue;
             }
             ExecutionResult result = program.execute(this, commandArgs);
-            if (result instanceof ExecutionError) {
-                System.err.println(((ExecutionError) result).message);
+            if (result instanceof ExecutionError executionError) {
+                System.err.println(executionError.message);
             }
         }
     }
@@ -83,7 +82,7 @@ public class Shell {
     }
 
     static List<String> parseArguments(String args) {
-        List<String> parsedArgs = new ArrayList<String>();
+        List<String> parsedArgs = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         Boolean insideSingleQuotes = false;
         Boolean insideDoubleQuotes = false;
