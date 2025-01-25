@@ -67,6 +67,7 @@ public enum BuiltinCommand implements Program {
         }
     };
 
+    @Override
     public abstract ExecutionResult execute(Shell shell, List<String> args);
 
     final String name;
