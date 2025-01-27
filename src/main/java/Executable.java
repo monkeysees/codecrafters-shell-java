@@ -14,21 +14,9 @@ public class Executable extends Program {
         this(name, null);
     }
 
-    Executable(String name, Map<RedirectDescriptor, ProcessBuilder.Redirect> redirects) {
+    Executable(String name, Map<Redirect, ProcessBuilder.Redirect> redirects) {
         super(name, redirects);
         ensureExecutableExists();
-        Object inputRedirect = redirects.get(RedirectDescriptor.INPUT);
-        Object outputRedirect = redirects.get(RedirectDescriptor.OUTPUT);
-        Object errorRedirect = redirects.get(RedirectDescriptor.ERROR);
-        if (inputRedirect == null) {
-            this.inputRedirect = ProcessBuilder.Redirect.INHERIT;
-        }
-        if (outputRedirect == null) {
-            this.outputRedirect = ProcessBuilder.Redirect.INHERIT;
-        }
-        if (errorRedirect == null) {
-            this.errorRedirect = ProcessBuilder.Redirect.INHERIT;
-        }
     }
 
     public ExecutionResult execute(Shell shell, List<String> args) {
@@ -37,9 +25,24 @@ public class Executable extends Program {
         processArgs.addAll(args);
         ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
         processBuilder.directory(shell.cwd);
-        processBuilder.redirectInput((ProcessBuilder.Redirect) this.inputRedirect);
-        processBuilder.redirectOutput((ProcessBuilder.Redirect) this.outputRedirect);
-        processBuilder.redirectError((ProcessBuilder.Redirect) this.errorRedirect);
+        processBuilder.redirectInput(
+                (this.inputRedirect != null)
+                        ? (ProcessBuilder.Redirect) this.inputRedirect
+                        : (this.inputRedirectAppend != null)
+                                ? (ProcessBuilder.Redirect) this.inputRedirectAppend
+                                : ProcessBuilder.Redirect.INHERIT);
+        processBuilder.redirectOutput(
+                (this.outputRedirect != null)
+                        ? (ProcessBuilder.Redirect) this.outputRedirect
+                        : (this.outputRedirectAppend != null)
+                                ? (ProcessBuilder.Redirect) this.outputRedirectAppend
+                                : ProcessBuilder.Redirect.INHERIT);
+        processBuilder.redirectError(
+                (this.errorRedirect != null)
+                        ? (ProcessBuilder.Redirect) this.errorRedirect
+                        : (this.errorRedirectAppend != null)
+                                ? (ProcessBuilder.Redirect) this.errorRedirectAppend
+                                : ProcessBuilder.Redirect.INHERIT);
         try {
             Process process = processBuilder.start();
             process.waitFor();

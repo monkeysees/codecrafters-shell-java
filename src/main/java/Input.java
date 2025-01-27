@@ -9,9 +9,9 @@ import java.util.Set;
 public class Input {
     public String command;
     public List<String> args;
-    public Map<RedirectDescriptor, ProcessBuilder.Redirect> redirects;
+    public Map<Redirect, ProcessBuilder.Redirect> redirects;
 
-    Input(String command, List<String> args, Map<RedirectDescriptor, ProcessBuilder.Redirect> redirects) {
+    Input(String command, List<String> args, Map<Redirect, ProcessBuilder.Redirect> redirects) {
         this.command = command;
         this.args = args;
         this.redirects = redirects;
@@ -20,33 +20,36 @@ public class Input {
     public static Input fromString(String s) {
         List<String> parsedCommandAndArgs = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
-        HashMap<RedirectDescriptor, ProcessBuilder.Redirect> redirects = new HashMap<>();
+        HashMap<Redirect, ProcessBuilder.Redirect> redirects = new HashMap<>();
 
         Boolean insideSingleQuotes = false;
         Boolean insideDoubleQuotes = false;
         Boolean isBackslashed = false;
-        Character potentialRedirectDescriptor = null;
-        Boolean isRedirectOperator = false;
+        Character potentialRedirect = null;
+        String potentialRedirectOperator = null;
         StringBuilder redirectArg = null;
 
         Set<Character> specialDoubleQuotesCharacters = Set.of('\\', '$', '"', '\n');
 
         for (Character c : s.toCharArray()) {
             if (c == '>' &&
-                    potentialRedirectDescriptor == null &&
+                    potentialRedirect == null &&
                     currentArg.length() == 0 &&
                     !insideSingleQuotes &&
                     !insideDoubleQuotes) {
-                potentialRedirectDescriptor = '1';
+                potentialRedirect = '1';
             }
 
-            if (potentialRedirectDescriptor != null && redirectArg == null) {
-                if (isRedirectOperator) {
-                    if (!Character.isWhitespace(c)) {
-                        currentArg.append(potentialRedirectDescriptor);
+            if (potentialRedirect != null && redirectArg == null) {
+                if (potentialRedirectOperator != null) {
+                    if (c == '>' && potentialRedirectOperator.equals(">")) {
+                        potentialRedirectOperator = ">>";
+                        continue;
+                    } else if (!Character.isWhitespace(c)) {
+                        currentArg.append(potentialRedirect);
                         currentArg.append(">");
-                        potentialRedirectDescriptor = null;
-                        isRedirectOperator = false;
+                        potentialRedirect = null;
+                        potentialRedirectOperator = null;
                         redirectArg = null;
                         continue;
                     } else {
@@ -56,11 +59,11 @@ public class Input {
                 }
 
                 if (c == '>') {
-                    isRedirectOperator = true;
+                    potentialRedirectOperator = ">";
                     continue;
                 } else {
-                    currentArg.append(potentialRedirectDescriptor);
-                    potentialRedirectDescriptor = null;
+                    currentArg.append(potentialRedirect);
+                    potentialRedirect = null;
                 }
             }
 
@@ -96,29 +99,31 @@ public class Input {
                 continue;
             }
 
-            if (RedirectDescriptor.isRedirectDescriptor(c) &&
+            if (Redirect.isDescriptor(c) &&
                     currentArg.length() == 0 &&
                     !insideSingleQuotes &&
                     !insideDoubleQuotes) {
-                potentialRedirectDescriptor = c;
+                potentialRedirect = c;
                 continue;
             }
 
             if (Character.isWhitespace(c) && !insideSingleQuotes && !insideDoubleQuotes) {
                 if (redirectArg != null) {
-                    if (isRedirectOperator && potentialRedirectDescriptor != null) {
+                    if (potentialRedirectOperator != null && potentialRedirect != null) {
                         File redirectFile = new File(redirectArg.toString());
                         if (redirectFile.isFile() &&
                                 (redirectFile.exists() || redirectFile.getParentFile().exists())) {
                             redirects.put(
-                                    RedirectDescriptor.fromCode(potentialRedirectDescriptor),
-                                    ProcessBuilder.Redirect.to(redirectFile));
+                                    Redirect.fromDescriptorAndOperator(potentialRedirect, potentialRedirectOperator),
+                                    (potentialRedirectOperator.equals(">"))
+                                            ? ProcessBuilder.Redirect.to(redirectFile)
+                                            : ProcessBuilder.Redirect.appendTo(redirectFile));
                         } else {
                             System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
                         }
                     }
-                    potentialRedirectDescriptor = null;
-                    isRedirectOperator = false;
+                    potentialRedirect = null;
+                    potentialRedirectOperator = null;
                     redirectArg = null;
                 } else if (currentArg.length() > 0) {
                     parsedCommandAndArgs.add(currentArg.toString());
@@ -134,7 +139,7 @@ public class Input {
             }
         }
         if (redirectArg != null) {
-            if (isRedirectOperator && potentialRedirectDescriptor != null) {
+            if (potentialRedirectOperator != null && potentialRedirect != null) {
                 File redirectFile = new File(redirectArg.toString());
                 File redirectParentFile = redirectFile.getParentFile();
                 if ((redirectParentFile != null && redirectParentFile.exists())) {
@@ -142,19 +147,22 @@ public class Input {
                         try {
                             redirectFile.createNewFile();
                         } catch (IOException e) {
-                            System.err.println(String.format("Couldn't create the file to redirect to: %s", redirectFile.toString()));
+                            System.err.println(String.format("Couldn't create the file to redirect to: %s",
+                                    redirectFile.toString()));
                         }
                     }
                     redirects.put(
-                            RedirectDescriptor.fromCode(potentialRedirectDescriptor),
-                            ProcessBuilder.Redirect.to(redirectFile));
+                            Redirect.fromDescriptorAndOperator(potentialRedirect, potentialRedirectOperator),
+                            (potentialRedirectOperator.equals(">"))
+                                    ? ProcessBuilder.Redirect.to(redirectFile)
+                                    : ProcessBuilder.Redirect.appendTo(redirectFile));
                 } else {
                     System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
                 }
             }
         } else {
-            if (potentialRedirectDescriptor != null) {
-                currentArg.append(potentialRedirectDescriptor);
+            if (potentialRedirect != null) {
+                currentArg.append(potentialRedirect);
             }
             if (currentArg.length() > 0) {
                 parsedCommandAndArgs.add(currentArg.toString());
