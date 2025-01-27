@@ -1,8 +1,6 @@
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 
 public class Shell {
     File cwd;
@@ -18,23 +16,28 @@ public class Shell {
         scanner = new Scanner(System.in);
         while (true) {
             System.out.print("$ ");
-            List<String> input = parseArguments(scanner.nextLine());
-            String command = input.get(0);
-            List<String> commandArgs = input.size() > 1
-                ? input.subList(1, input.size())
-                : new ArrayList<>();
+            String scannedInput = scanner.nextLine();
+            Input input = Input.fromString(scannedInput);
+            String command = input.command;
+            List<String> commandArgs = input.args;
             Program program;
             try {
                 program = (BuiltinCommand.isBuiltin(command))
-                        ? BuiltinCommand.fromString(command)
-                        : new Executable(command);
+                        ? BuiltinCommand.fromName(command, input.redirects)
+                        : new Executable(command, input.redirects);
             } catch (IllegalArgumentException e) {
                 System.err.println(String.format("%s: command not found", command));
                 continue;
             }
-            ExecutionResult result = program.execute(this, commandArgs);
+            ExecutionResult result = (program instanceof Executable)
+                    ? program.execute(this, commandArgs)
+                    : program.execute(this, commandArgs);
             if (result instanceof ExecutionError executionError) {
-                System.err.println(executionError.message);
+                if (program instanceof Executable) {
+                    Printer.print(((Executable) program).errorRedirect, executionError.message, true);
+                } else {
+                    Printer.print(((BuiltinCommand) program).errorRedirect, executionError.message, true);
+                }
             }
         }
     }
@@ -79,55 +82,5 @@ public class Shell {
         if (!dir.isDirectory()) {
             throw new IllegalArgumentException("Not a directory");
         }
-    }
-
-    static List<String> parseArguments(String args) {
-        List<String> parsedArgs = new ArrayList<>();
-        StringBuilder currentArg = new StringBuilder();
-        Boolean insideSingleQuotes = false;
-        Boolean insideDoubleQuotes = false;
-        Boolean isBackslashed = false;
-        Set<Character> specialDoubleQuotesCharacters = Set.of('\\', '$', '"', '\n');
-
-        for (Character c : args.toCharArray()) {
-            if (isBackslashed) {
-                if (insideDoubleQuotes && !specialDoubleQuotesCharacters.contains(c)) {
-                    currentArg.append('\\');
-                }
-                currentArg.append(c);
-                isBackslashed = false;
-                continue;
-            }
-
-            if (c == '\\' && !insideSingleQuotes) {
-                isBackslashed = true;
-                continue;
-            }
-
-            if (c == '\'' && !insideDoubleQuotes) {
-                insideSingleQuotes = !insideSingleQuotes;
-                continue;
-            }
-
-            if (c == '\"' && !insideSingleQuotes) {
-                insideDoubleQuotes = !insideDoubleQuotes;
-                continue;
-            }
-
-            if (Character.isWhitespace(c) && !insideSingleQuotes && !insideDoubleQuotes) {
-                if (currentArg.length() > 0) {
-                    parsedArgs.add(currentArg.toString());
-                    currentArg = new StringBuilder();
-                }
-                continue;
-            }
-
-            currentArg.append(c);
-        }
-        if (currentArg.length() > 0) {
-            parsedArgs.add(currentArg.toString());
-        }
-
-        return parsedArgs;
     }
 }
