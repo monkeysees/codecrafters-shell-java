@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -136,7 +137,14 @@ public class Input {
             if (isRedirectOperator && potentialRedirectDescriptor != null) {
                 File redirectFile = new File(redirectArg.toString());
                 File redirectParentFile = redirectFile.getParentFile();
-                if (redirectFile.exists() || (redirectParentFile != null && redirectParentFile.exists())) {
+                if ((redirectParentFile != null && redirectParentFile.exists())) {
+                    if (!redirectFile.exists()) {
+                        try {
+                            redirectFile.createNewFile();
+                        } catch (IOException e) {
+                            System.err.println(String.format("Couldn't create the file to redirect to: %s", redirectFile.toString()));
+                        }
+                    }
                     redirects.put(
                             RedirectDescriptor.fromCode(potentialRedirectDescriptor),
                             ProcessBuilder.Redirect.to(redirectFile));
