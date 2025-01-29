@@ -1,5 +1,7 @@
 import java.io.File;
 import java.io.IOException;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,156 +19,117 @@ public class Input {
         this.redirects = redirects;
     }
 
-    public static Input fromString(String s) {
-        List<String> parsedCommandAndArgs = new ArrayList<>();
-        StringBuilder currentArg = new StringBuilder();
-        HashMap<Redirect, ProcessBuilder.Redirect> redirects = new HashMap<>();
+    private static String parseArgFromIterator(CharacterIterator it) {
+        StringBuilder arg = new StringBuilder();
 
-        Boolean insideSingleQuotes = false;
-        Boolean insideDoubleQuotes = false;
-        Boolean isBackslashed = false;
-        Character potentialRedirect = null;
-        String potentialRedirectOperator = null;
-        StringBuilder redirectArg = null;
-
-        Set<Character> specialDoubleQuotesCharacters = Set.of('\\', '$', '"', '\n');
-
-        for (Character c : s.toCharArray()) {
-            if (c == '>' &&
-                    potentialRedirect == null &&
-                    currentArg.length() == 0 &&
-                    !insideSingleQuotes &&
-                    !insideDoubleQuotes) {
-                potentialRedirect = '1';
-            }
-
-            if (potentialRedirect != null && redirectArg == null) {
-                if (potentialRedirectOperator != null) {
-                    if (c == '>' && potentialRedirectOperator.equals(">")) {
-                        potentialRedirectOperator = ">>";
-                        continue;
-                    } else if (!Character.isWhitespace(c)) {
-                        currentArg.append(potentialRedirect);
-                        currentArg.append(">");
-                        potentialRedirect = null;
-                        potentialRedirectOperator = null;
-                        redirectArg = null;
-                        continue;
-                    } else {
-                        redirectArg = new StringBuilder();
-                        continue;
-                    }
+        for (Character c = it.current(); c != CharacterIterator.DONE && !Character.isWhitespace(c); c = it.next()) {
+            if (c == '\'') {
+                Character quotedChar = it.next();
+                while (quotedChar != '\'' && quotedChar != CharacterIterator.DONE) {
+                    arg.append(quotedChar);
+                    quotedChar = it.next();
                 }
-
-                if (c == '>') {
-                    potentialRedirectOperator = ">";
-                    continue;
-                } else {
-                    currentArg.append(potentialRedirect);
-                    potentialRedirect = null;
-                }
-            }
-
-            if (isBackslashed) {
-                if (insideDoubleQuotes && !specialDoubleQuotesCharacters.contains(c)) {
-                    if (redirectArg != null) {
-                        redirectArg.append('\\');
-                    } else {
-                        currentArg.append('\\');
-                    }
-                }
-                if (redirectArg != null) {
-                    redirectArg.append(c);
-                } else {
-                    currentArg.append(c);
-                }
-                isBackslashed = false;
                 continue;
             }
 
-            if (c == '\\' && !insideSingleQuotes) {
-                isBackslashed = true;
-                continue;
-            }
-
-            if (c == '\'' && !insideDoubleQuotes) {
-                insideSingleQuotes = !insideSingleQuotes;
-                continue;
-            }
-
-            if (c == '\"' && !insideSingleQuotes) {
-                insideDoubleQuotes = !insideDoubleQuotes;
-                continue;
-            }
-
-            if (Redirect.isDescriptor(c) &&
-                    currentArg.length() == 0 &&
-                    !insideSingleQuotes &&
-                    !insideDoubleQuotes) {
-                potentialRedirect = c;
-                continue;
-            }
-
-            if (Character.isWhitespace(c) && !insideSingleQuotes && !insideDoubleQuotes) {
-                if (redirectArg != null) {
-                    if (potentialRedirectOperator != null && potentialRedirect != null) {
-                        File redirectFile = new File(redirectArg.toString());
-                        if (redirectFile.isFile() &&
-                                (redirectFile.exists() || redirectFile.getParentFile().exists())) {
-                            redirects.put(
-                                    Redirect.fromDescriptorAndOperator(potentialRedirect, potentialRedirectOperator),
-                                    (potentialRedirectOperator.equals(">"))
-                                            ? ProcessBuilder.Redirect.to(redirectFile)
-                                            : ProcessBuilder.Redirect.appendTo(redirectFile));
+            if (c == '"') {
+                Character quotedChar = it.next();
+                while (quotedChar != '"' && quotedChar != CharacterIterator.DONE) {
+                    if (quotedChar == '\\') {
+                        Character nextChar = it.next();
+                        if (Set.of('\\', '$', '"', '\n').contains(nextChar)) {
+                            quotedChar = nextChar;
                         } else {
-                            System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
+                            it.previous();
                         }
                     }
-                    potentialRedirect = null;
-                    potentialRedirectOperator = null;
-                    redirectArg = null;
-                } else if (currentArg.length() > 0) {
-                    parsedCommandAndArgs.add(currentArg.toString());
-                    currentArg = new StringBuilder();
+                    arg.append(quotedChar);
+                    quotedChar = it.next();
                 }
                 continue;
             }
 
-            if (redirectArg != null) {
-                redirectArg.append(c);
-            } else {
-                currentArg.append(c);
+            if (c == '\\') {
+                Character nextChar = it.next();
+                if (nextChar != CharacterIterator.DONE) {
+                    arg.append(nextChar);
+                }
+                continue;
             }
+
+            arg.append(c);
         }
-        if (redirectArg != null) {
-            if (potentialRedirectOperator != null && potentialRedirect != null) {
-                File redirectFile = new File(redirectArg.toString());
+
+        return arg.toString();
+    }
+
+    private static String parseRedirectOperatorFromIterator(CharacterIterator it) {
+        StringBuilder operator = new StringBuilder();
+
+        Character firstChar = it.current();
+
+        if (!Set.of('0', '1', '2', '>').contains(firstChar)) {
+            return null;
+        }
+
+        operator.append(firstChar);
+
+        for (Character c = it.next(); c == '>' && operator.length() < 3; c = it.next()) {
+            operator.append(c);
+        }
+
+        if (!Character.isWhitespace(it.current()) || !operator.toString().matches("^[012]?>{1,2}$")) {
+            for (int i = 0; i < operator.length(); i++) {
+                it.previous();
+            }
+            return null;
+        }
+
+        return operator.toString();
+    }
+
+    private static void skipIteratorWhitespace(CharacterIterator it) {
+        while (Character.isWhitespace(it.current())) {
+            it.next();
+        }
+    }
+
+    public static Input fromString(String s) {
+        List<String> parsedCommandAndArgs = new ArrayList<>();
+        HashMap<Redirect, ProcessBuilder.Redirect> redirects = new HashMap<>();
+
+        CharacterIterator it = new StringCharacterIterator(s);
+        while (it.current() != CharacterIterator.DONE) {
+            skipIteratorWhitespace(it);
+
+            String redirectOperator = parseRedirectOperatorFromIterator(it);
+            if (redirectOperator != null) {
+                skipIteratorWhitespace(it);
+                String redirectTo = parseArgFromIterator(it);
+                File redirectFile = new File(redirectTo.toString());
                 File redirectParentFile = redirectFile.getParentFile();
-                if ((redirectParentFile != null && redirectParentFile.exists())) {
+                if (redirectParentFile != null && redirectParentFile.exists()) {
                     if (!redirectFile.exists()) {
                         try {
                             redirectFile.createNewFile();
                         } catch (IOException e) {
                             System.err.println(String.format("Couldn't create the file to redirect to: %s",
                                     redirectFile.toString()));
+                            continue;
                         }
                     }
                     redirects.put(
-                            Redirect.fromDescriptorAndOperator(potentialRedirect, potentialRedirectOperator),
-                            (potentialRedirectOperator.equals(">"))
-                                    ? ProcessBuilder.Redirect.to(redirectFile)
-                                    : ProcessBuilder.Redirect.appendTo(redirectFile));
+                            Redirect.fromString(redirectOperator),
+                            redirectOperator.endsWith(">>")
+                                    ? ProcessBuilder.Redirect.appendTo(new File(redirectTo))
+                                    : ProcessBuilder.Redirect.to(new File(redirectTo)));
                 } else {
                     System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
                 }
+                continue;
             }
-        } else {
-            if (potentialRedirect != null) {
-                currentArg.append(potentialRedirect);
-            }
-            if (currentArg.length() > 0) {
-                parsedCommandAndArgs.add(currentArg.toString());
-            }
+
+            parsedCommandAndArgs.add(parseArgFromIterator(it));
         }
 
         String command = parsedCommandAndArgs.get(0);
