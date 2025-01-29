@@ -5,40 +5,28 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-public class Printer {
-    static void print(Object destination, String data) {
+interface Printer {
+    public void print(Redirect redirect, String data);
+
+    static void print(PrintStream destination, String data) {
+        destination.println(data);
+    }
+
+    static void print(File destination, String data) {
         print(destination, data, false);
     }
 
-    static void print(Object destination, String data, Boolean isError) {
-        switch (destination) {
-            case PrintStream ps -> ps.println(data);
-            case ProcessBuilder.Redirect redirect -> {
-                {
-                    File file = redirect.file();
-                    if (file != null) {
-                        try (
-                                FileWriter fw = new FileWriter(
-                                        redirect.file(),
-                                        redirect.type() == ProcessBuilder.Redirect.Type.APPEND);
-                                PrintWriter writer = new PrintWriter(fw)) {
-                            writer.println(data);
-                        } catch (FileNotFoundException e) {
-                            System.err.println(String.format("No such file: %s", redirect.file()));
-                        } catch (IOException e) {
-                            System.err.println(
-                                    String.format("Error writing to file %s: %s", redirect.file(), e.getMessage()));
-                        }
-                    } else {
-                        if (isError) {
-                            System.err.println(data);
-                        } else {
-                            System.out.println(data);
-                        }
-                    }
-                }
-            }
-            default -> {
+    static void print(File destination, String data, Boolean isAppend) {
+        if (destination != null) {
+            try (
+                    FileWriter fw = new FileWriter(destination, isAppend);
+                    PrintWriter writer = new PrintWriter(fw)) {
+                writer.println(data);
+            } catch (FileNotFoundException e) {
+                System.err.println(String.format("No such file: %s", destination));
+            } catch (IOException e) {
+                System.err.println(
+                        String.format("Error writing to file %s: %s", destination, e.getMessage()));
             }
         }
     }

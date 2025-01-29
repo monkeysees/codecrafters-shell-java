@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -11,14 +12,14 @@ public abstract class BuiltinCommand extends Program {
         this(name, null);
     }
 
-    BuiltinCommand(String name, Map<Redirect, ProcessBuilder.Redirect> redirects) {
+    BuiltinCommand(String name, Map<RedirectType, File> redirects) {
         super(name, redirects);
     }
 
     static class Exit extends BuiltinCommand {
         String name = "exit";
 
-        Exit(Map<Redirect, ProcessBuilder.Redirect> redirects) {
+        Exit(Map<RedirectType, File> redirects) {
             super("exit", redirects);
         }
 
@@ -34,18 +35,12 @@ public abstract class BuiltinCommand extends Program {
     static class Echo extends BuiltinCommand {
         String name = "echo";
 
-        Echo(Map<Redirect, ProcessBuilder.Redirect> redirects) {
+        Echo(Map<RedirectType, File> redirects) {
             super("echo", redirects);
         }
 
         public ExecutionResult execute(Shell shell, List<String> args) {
-            Printer.print(
-                    this.outputRedirect != null
-                            ? this.outputRedirect
-                            : (this.outputRedirectAppend != null)
-                                    ? this.outputRedirectAppend
-                                    : System.out,
-                    String.join(" ", args));
+            print(getOutputRedirect(), String.join(" ", args));
             return new ExecutionResult();
         }
     }
@@ -53,18 +48,13 @@ public abstract class BuiltinCommand extends Program {
     static class PWD extends BuiltinCommand {
         String name = "pwd";
 
-        PWD(Map<Redirect, ProcessBuilder.Redirect> redirects) {
+        PWD(Map<RedirectType, File> redirects) {
             super("pwd", redirects);
         }
 
         public ExecutionResult execute(Shell shell, List<String> args) {
             if (args.isEmpty()) {
-                Printer.print(this.outputRedirect != null
-                        ? this.outputRedirect
-                        : (this.outputRedirectAppend != null)
-                                ? this.outputRedirectAppend
-                                : System.out,
-                        shell.cwd.toString());
+                print(getOutputRedirect(), shell.cwd.toString());
                 return new ExecutionResult();
             } else {
                 return new ExecutionError("pwd: too many arguments");
@@ -75,7 +65,7 @@ public abstract class BuiltinCommand extends Program {
     static class CD extends BuiltinCommand {
         String name = "cd";
 
-        CD(Map<Redirect, ProcessBuilder.Redirect> redirects) {
+        CD(Map<RedirectType, File> redirects) {
             super("cd", redirects);
         }
 
@@ -98,28 +88,18 @@ public abstract class BuiltinCommand extends Program {
     static class Type extends BuiltinCommand {
         String name = "type";
 
-        Type(Map<Redirect, ProcessBuilder.Redirect> redirects) {
+        Type(Map<RedirectType, File> redirects) {
             super("type", redirects);
         }
 
         public ExecutionResult execute(Shell shell, List<String> args) {
             for (String arg : args) {
                 if (isBuiltin(arg)) {
-                    Printer.print(this.outputRedirect != null
-                            ? this.outputRedirect
-                            : (this.outputRedirectAppend != null)
-                                    ? this.outputRedirectAppend
-                                    : System.out,
-                            String.format("%s is a shell builtin", arg));
+                    print(getOutputRedirect(), String.format("%s is a shell builtin", arg));
                 } else {
                     String path = Executable.findExecutablePath(arg);
                     if (path != null) {
-                        Printer.print(this.outputRedirect != null
-                                ? this.outputRedirect
-                                : (this.outputRedirectAppend != null)
-                                        ? this.outputRedirectAppend
-                                        : System.out,
-                                String.format("%s is %s", arg, path));
+                        print(getOutputRedirect(), String.format("%s is %s", arg, path));
                     } else {
                         return new ExecutionError(String.format("%s: not found", arg));
                     }
@@ -134,7 +114,7 @@ public abstract class BuiltinCommand extends Program {
         return fromName(name, null);
     }
 
-    public static BuiltinCommand fromName(String name, Map<Redirect, ProcessBuilder.Redirect> redirects) {
+    public static BuiltinCommand fromName(String name, Map<RedirectType, File> redirects) {
         return switch (name) {
             case "exit" -> new Exit(redirects);
             case "echo" -> new Echo(redirects);
@@ -147,5 +127,41 @@ public abstract class BuiltinCommand extends Program {
 
     public static boolean isBuiltin(String name) {
         return COMMANDS.contains(name);
+    }
+
+    public void print(Redirect redirect, String data) {
+        switch (redirect.type) {
+            case OUTPUT -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data);
+                } else {
+                    Printer.print(System.out, data);
+                }
+            }
+
+            case OUTPUT_APPEND -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data, true);
+                } else {
+                    Printer.print(System.out, data);
+                }
+            }
+
+            case ERROR -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data);
+                } else {
+                    Printer.print(System.err, data);
+                }
+            }
+
+            case ERROR_APPEND -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data, true);
+                } else {
+                    Printer.print(System.err, data);
+                }
+            }
+        }
     }
 }

@@ -14,7 +14,7 @@ public class Executable extends Program {
         this(name, null);
     }
 
-    Executable(String name, Map<Redirect, ProcessBuilder.Redirect> redirects) {
+    Executable(String name, Map<RedirectType, File> redirects) {
         super(name, redirects);
         ensureExecutableExists();
     }
@@ -25,24 +25,10 @@ public class Executable extends Program {
         processArgs.addAll(args);
         ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
         processBuilder.directory(shell.cwd);
-        processBuilder.redirectInput(
-                (this.inputRedirect != null)
-                        ? (ProcessBuilder.Redirect) this.inputRedirect
-                        : (this.inputRedirectAppend != null)
-                                ? (ProcessBuilder.Redirect) this.inputRedirectAppend
-                                : ProcessBuilder.Redirect.INHERIT);
-        processBuilder.redirectOutput(
-                (this.outputRedirect != null)
-                        ? (ProcessBuilder.Redirect) this.outputRedirect
-                        : (this.outputRedirectAppend != null)
-                                ? (ProcessBuilder.Redirect) this.outputRedirectAppend
-                                : ProcessBuilder.Redirect.INHERIT);
-        processBuilder.redirectError(
-                (this.errorRedirect != null)
-                        ? (ProcessBuilder.Redirect) this.errorRedirect
-                        : (this.errorRedirectAppend != null)
-                                ? (ProcessBuilder.Redirect) this.errorRedirectAppend
-                                : ProcessBuilder.Redirect.INHERIT);
+        processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+        processBuilder.redirectOutput(getProcessRedirect(getOutputRedirect()));
+        processBuilder.redirectError(getProcessRedirect(getErrorRedirect()));
+        ;
         try {
             Process process = processBuilder.start();
             process.waitFor();
@@ -72,5 +58,51 @@ public class Executable extends Program {
             }
         }
         return null;
+    }
+
+    public ProcessBuilder.Redirect getProcessRedirect(Redirect redirect) {
+        if (redirect == null || redirect.file == null) {
+            return ProcessBuilder.Redirect.INHERIT;
+        }
+
+        return RedirectType.isAppend(redirect.type)
+                ? ProcessBuilder.Redirect.appendTo(redirect.file)
+                : ProcessBuilder.Redirect.to(redirect.file);
+    }
+
+    public void print(Redirect redirect, String data) {
+        switch (redirect.type) {
+            case OUTPUT -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data);
+                } else {
+                    Printer.print(System.out, data);
+                }
+            }
+
+            case OUTPUT_APPEND -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data, true);
+                } else {
+                    Printer.print(System.out, data);
+                }
+            }
+
+            case ERROR -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data);
+                } else {
+                    Printer.print(System.err, data);
+                }
+            }
+
+            case ERROR_APPEND -> {
+                if (redirect.file != null) {
+                    Printer.print(redirect.file, data, true);
+                } else {
+                    Printer.print(System.err, data);
+                }
+            }
+        }
     }
 }

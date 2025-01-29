@@ -11,9 +11,9 @@ import java.util.Set;
 public class Input {
     public String command;
     public List<String> args;
-    public Map<Redirect, ProcessBuilder.Redirect> redirects;
+    public Map<RedirectType, File> redirects;
 
-    Input(String command, List<String> args, Map<Redirect, ProcessBuilder.Redirect> redirects) {
+    Input(String command, List<String> args, Map<RedirectType, File> redirects) {
         this.command = command;
         this.args = args;
         this.redirects = redirects;
@@ -63,12 +63,12 @@ public class Input {
         return arg.toString();
     }
 
-    private static String parseRedirectOperatorFromIterator(CharacterIterator it) {
+    private static String parseRedirectTypeFromIterator(CharacterIterator it) {
         StringBuilder operator = new StringBuilder();
 
         Character firstChar = it.current();
 
-        if (!Set.of('0', '1', '2', '>').contains(firstChar)) {
+        if (!Set.of('1', '2', '>').contains(firstChar)) {
             return null;
         }
 
@@ -96,13 +96,13 @@ public class Input {
 
     public static Input fromString(String s) {
         List<String> parsedCommandAndArgs = new ArrayList<>();
-        HashMap<Redirect, ProcessBuilder.Redirect> redirects = new HashMap<>();
+        HashMap<RedirectType, File> redirects = new HashMap<>();
 
         CharacterIterator it = new StringCharacterIterator(s);
         while (it.current() != CharacterIterator.DONE) {
             skipIteratorWhitespace(it);
 
-            String redirectOperator = parseRedirectOperatorFromIterator(it);
+            String redirectOperator = parseRedirectTypeFromIterator(it);
             if (redirectOperator != null) {
                 skipIteratorWhitespace(it);
                 String redirectTo = parseArgFromIterator(it);
@@ -118,11 +118,7 @@ public class Input {
                             continue;
                         }
                     }
-                    redirects.put(
-                            Redirect.fromString(redirectOperator),
-                            redirectOperator.endsWith(">>")
-                                    ? ProcessBuilder.Redirect.appendTo(new File(redirectTo))
-                                    : ProcessBuilder.Redirect.to(new File(redirectTo)));
+                    redirects.put(RedirectType.fromString(redirectOperator), new File(redirectTo));
                 } else {
                     System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
                 }

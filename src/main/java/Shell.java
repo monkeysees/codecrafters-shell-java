@@ -33,26 +33,7 @@ public class Shell {
                     ? program.execute(this, commandArgs)
                     : program.execute(this, commandArgs);
             if (result instanceof ExecutionError executionError) {
-                switch (program) {
-                    case Executable exec -> {
-                        Printer.print(exec.errorRedirect != null
-                                ? exec.errorRedirect
-                                : exec.errorRedirectAppend != null
-                                        ? exec.errorRedirectAppend
-                                        : ProcessBuilder.Redirect.INHERIT,
-                                executionError.message, true);
-                    }
-                    case BuiltinCommand builtin -> {
-                        Printer.print(builtin.errorRedirect != null
-                                ? builtin.errorRedirect
-                                : builtin.errorRedirectAppend != null
-                                        ? builtin.errorRedirectAppend
-                                        : System.err,
-                                executionError.message, true);
-                    }
-                    default -> {
-                    }
-                }
+                program.print(program.getErrorRedirect(), executionError.message);
             }
         }
     }
