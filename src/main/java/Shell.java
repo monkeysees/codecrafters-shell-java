@@ -29,9 +29,7 @@ public class Shell {
                 System.err.println(String.format("%s: command not found", command));
                 continue;
             }
-            ExecutionResult result = (program instanceof Executable)
-                    ? program.execute(this, commandArgs)
-                    : program.execute(this, commandArgs);
+            ExecutionResult result = program.execute(this, commandArgs);
             if (result instanceof ExecutionError executionError) {
                 program.print(program.getErrorRedirect(), executionError.message);
             }
