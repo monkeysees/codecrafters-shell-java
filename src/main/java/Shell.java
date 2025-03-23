@@ -16,6 +16,7 @@ public class Shell {
     File cwd;
     String homeDir;
     static final Pattern COMMAND_BEGINNING_PATTERN = Pattern.compile("^\\s*(\\S+)$");
+    static final Character BELL_CHARACTER = '\u0007';
 
     Shell() {
         cwd = new File(System.getProperty("user.dir"));
@@ -111,20 +112,29 @@ public class Shell {
             }
 
             // tab autocomplete
-            if (c == 9) {
+            if (c == 9 && input.length() > 0) {
                 Matcher commandBeginningMatcher = COMMAND_BEGINNING_PATTERN.matcher(input);
                 String commandBeginning = commandBeginningMatcher.find() ? commandBeginningMatcher.group(1) : null;
                 if (commandBeginning != null) {
                     String autocompletedProgramName = BuiltinCommand.autocomplete(commandBeginning);
-                    if (autocompletedProgramName != null
-                            && commandBeginning.length() < autocompletedProgramName.length()) {
-                        String autocompletedPortion = autocompletedProgramName.substring(commandBeginning.length())
-                                + " ";
-                        input.append(autocompletedPortion);
-                        System.out.print(autocompletedPortion);
-                        continue;
+                    if (autocompletedProgramName != null) {
+                        if (commandBeginning.length() < autocompletedProgramName.length()) {
+                            String autocompletedPortion = autocompletedProgramName.substring(commandBeginning.length())
+                                    + " ";
+                            input.append(autocompletedPortion);
+                            System.out.print(autocompletedPortion);
+                        } else {
+                            input.append(" ");
+                            System.out.print(" ");
+                        }
+                    } else {
+                        System.out.print(BELL_CHARACTER);
                     }
+                } else {
+                    System.out.print(BELL_CHARACTER);
                 }
+
+                continue;
             }
 
             bout.write(c);
