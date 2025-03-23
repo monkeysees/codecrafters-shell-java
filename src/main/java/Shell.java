@@ -1,38 +1,164 @@
+// Setting the console raw mode for character-buffered input
+// instead of a line-buffered one is inspired by the following resource:
+// https://darkcoding.net/software/non-blocking-console-io-is-not-possible/
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
+import java.util.Map;
 
 public class Shell {
     File cwd;
     String homeDir;
-    Scanner scanner;
 
     Shell() {
         cwd = new File(System.getProperty("user.dir"));
         homeDir = System.getenv("HOME");
     }
 
+    @SuppressWarnings({ "CallToPrintStackTrace", "UseSpecificCatch" })
     void run() {
-        scanner = new Scanner(System.in);
+        Executable stty = null;
+        String ttyConfig = null;
+        Boolean isError = false;
+        PrintStream rawModeStream = new PrintStream(System.out) {
+            @Override
+            public void print(String s) {
+                super.print(s.replaceAll("\n", "\r\n"));
+            }
+
+            @Override
+            public void println() {
+                super.print("\r\n");
+            }
+
+            @Override
+            public void println(String s) {
+                print(s);
+                println();
+            }
+        };
+        System.setOut(rawModeStream);
+        System.setErr(rawModeStream);
+
+        try {
+            stty = new Executable("stty", Map.of(RedirectType.INPUT, new File("/dev/tty")));
+            stty.toggleShouldReturnOutput();
+            ttyConfig = stty.execute(this, Arrays.asList("-g")).value.strip();
+            if (ttyConfig == null || ttyConfig.length() == 0) {
+                throw new Exception("Couldn't safely set up input handling.");
+            }
+            stty.execute(this, Arrays.asList("raw", "-echo"));
+
+            while (true) {
+                System.out.print("$ ");
+                String input = readInput();
+                System.out.println();
+                processInput(input);
+            }
+        } catch (Error e) {
+            isError = true;
+        } catch (UserInitiatedException e) {
+            if (e instanceof AbortException) {
+                isError = true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            isError = true;
+        } finally {
+            if (stty != null && ttyConfig != null) {
+                stty.execute(this, Arrays.asList(ttyConfig));
+            }
+        }
+
+        System.exit(isError ? 1 : 0);
+    }
+
+    String readInput() throws IOException, UserInitiatedException {
+        StringBuilder input = new StringBuilder();
+        ByteArrayOutputStream bout;
+        int c;
+        Boolean isEscaped = false;
+
         while (true) {
-            System.out.print("$ ");
-            String scannedInput = scanner.nextLine();
-            Input input = Input.fromString(scannedInput);
-            String command = input.command;
-            List<String> commandArgs = input.args;
-            Program program;
-            try {
-                program = (BuiltinCommand.isBuiltin(command))
-                        ? BuiltinCommand.fromName(command, input.redirects)
-                        : new Executable(command, input.redirects);
-            } catch (IllegalArgumentException e) {
-                System.err.println(String.format("%s: command not found", command));
+            bout = new ByteArrayOutputStream();
+            c = System.in.read();
+
+            // abort
+            if (c == -1 || c == 3 || c == 4) {
+                throw new AbortException();
+            }
+
+            // new line
+            if ((c == 13 || c == 10) && !isEscaped) {
+                return input.toString();
+            }
+
+            // delete
+            if (c == 127) {
+                if (input.length() > 0) {
+                    input.deleteCharAt(input.length() - 1);
+                    System.out.print("\b \b");
+                    System.out.flush();
+                }
                 continue;
             }
-            ExecutionResult result = program.execute(this, commandArgs);
-            if (result instanceof ExecutionError executionError) {
-                program.print(program.getErrorRedirect(), executionError.message);
+
+            bout.write(c);
+            String binaryRepresentation = Integer.toBinaryString(c);
+            if (binaryRepresentation.length() == 8) {
+                // two byte character
+                if (binaryRepresentation.startsWith("110")) {
+                    bout.write(System.in.read());
+                }
+                // three byte character
+                else if (binaryRepresentation.startsWith("1110")) {
+                    bout.write(System.in.read());
+                    bout.write(System.in.read());
+                }
+                // four byte character
+                else if (binaryRepresentation.startsWith("11110")) {
+                    bout.write(System.in.read());
+                    bout.write(System.in.read());
+                    bout.write(System.in.read());
+                }
             }
+
+            if (c == 13 || c == 10) {
+                input.append('\n');
+                System.out.print("\r\n");
+            } else {
+                input.append(bout);
+                System.out.print(bout);
+            }
+
+            if (c == 92) {
+                isEscaped = !isEscaped;
+            } else if (isEscaped) {
+                isEscaped = false;
+            }
+        }
+    }
+
+    void processInput(String input) throws UserInitiatedException {
+        Input preparedInput = Input.fromString(input);
+        String command = preparedInput.command;
+        List<String> commandArgs = preparedInput.args;
+        Program program;
+        try {
+            program = (BuiltinCommand.isBuiltin(command))
+                    ? BuiltinCommand.fromName(command, preparedInput.redirects)
+                    : new Executable(command, preparedInput.redirects);
+        } catch (IllegalArgumentException e) {
+            Printer.print(System.err, String.format("%s: command not found", command));
+            return;
+        }
+        ExecutionResult result = program.execute(this, commandArgs);
+        if (result instanceof ExecutionError executionError) {
+            program.print(program.getErrorRedirect(), executionError.message);
         }
     }
 

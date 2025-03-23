@@ -2,6 +2,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum RedirectType {
+    INPUT("1<"),
+    INPUT_APPEND("1<<"),
     OUTPUT("1>"),
     OUTPUT_APPEND("1>>"),
     ERROR("2>"),
@@ -15,6 +17,8 @@ public enum RedirectType {
         for (RedirectType command : values()) {
             OPERATOR_TO_REDIRECT.put(command.operator, command);
         }
+        OPERATOR_TO_REDIRECT.put("<", INPUT);
+        OPERATOR_TO_REDIRECT.put("<<", INPUT_APPEND);
         OPERATOR_TO_REDIRECT.put(">", OUTPUT);
         OPERATOR_TO_REDIRECT.put(">>", OUTPUT_APPEND);
     }

@@ -9,6 +9,7 @@ public class Executable extends Program {
     static final String[] DIRS = (PATH != null && !PATH.isEmpty())
             ? PATH.split(":")
             : new String[] {};
+    Boolean shouldReturnOutput = false;
 
     Executable(String name) {
         this(name, null);
@@ -25,14 +26,41 @@ public class Executable extends Program {
         processArgs.addAll(args);
         ProcessBuilder processBuilder = new ProcessBuilder(processArgs);
         processBuilder.directory(shell.cwd);
-        processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
-        processBuilder.redirectOutput(getProcessRedirect(getOutputRedirect()));
-        processBuilder.redirectError(getProcessRedirect(getErrorRedirect()));
-        ;
+
+        ProcessBuilder.Redirect redirectInput = ProcessBuilder.Redirect.INHERIT;
+        ProcessBuilder.Redirect redirectOutput = getProcessRedirect(getOutputRedirect());
+        ProcessBuilder.Redirect redirectError = getProcessRedirect(getErrorRedirect());
+
+        processBuilder.redirectInput(redirectInput);
+        if (!shouldReturnOutput) {
+            processBuilder.redirectOutput(redirectOutput);
+        }
+        processBuilder.redirectError(redirectError);
+
         try {
             Process process = processBuilder.start();
             process.waitFor();
-            return new ExecutionResult();
+            String output = null;
+
+            if (shouldReturnOutput || redirectOutput == ProcessBuilder.Redirect.PIPE) {
+                output = new String(process.getInputStream().readAllBytes());
+                if (!shouldReturnOutput) {
+                    if (output.length() > 0) {
+                        System.out.print(output);
+                    }
+                }
+            }
+
+            if (redirectError == ProcessBuilder.Redirect.PIPE) {
+                String error = new String(process.getErrorStream().readAllBytes());
+                if (error.length() > 0) {
+                    System.err.print(error);
+                }
+            }
+
+            return shouldReturnOutput
+                    ? new ExecutionResult(output)
+                    : new ExecutionResult();
         } catch (IOException e) {
             return new ExecutionError(e.getMessage());
         } catch (InterruptedException e) {
@@ -62,7 +90,7 @@ public class Executable extends Program {
 
     public ProcessBuilder.Redirect getProcessRedirect(Redirect redirect) {
         if (redirect == null || redirect.file == null) {
-            return ProcessBuilder.Redirect.INHERIT;
+            return ProcessBuilder.Redirect.PIPE;
         }
 
         return RedirectType.isAppend(redirect.type)
@@ -104,5 +132,9 @@ public class Executable extends Program {
                 }
             }
         }
+    }
+
+    void toggleShouldReturnOutput() {
+        this.shouldReturnOutput = !this.shouldReturnOutput;
     }
 }

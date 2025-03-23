@@ -4,6 +4,8 @@ import java.util.Map;
 
 abstract class Program implements Printer {
     String name;
+    public File inputRedirect;
+    public File inputRedirectAppend;
     public File outputRedirect;
     public File outputRedirectAppend;
     public File errorRedirect;
@@ -29,7 +31,13 @@ abstract class Program implements Printer {
         }
     }
 
-    abstract ExecutionResult execute(Shell shell, List<String> args);
+    abstract ExecutionResult execute(Shell shell, List<String> args) throws UserInitiatedException;
+
+    public Redirect getInputRedirect() {
+        return (inputRedirectAppend != null)
+                ? new Redirect(inputRedirectAppend, RedirectType.INPUT_APPEND)
+                : new Redirect(inputRedirect, RedirectType.INPUT);
+    }
 
     public Redirect getOutputRedirect() {
         return (outputRedirectAppend != null)

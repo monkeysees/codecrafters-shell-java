@@ -113,14 +113,14 @@ public class Input {
                         try {
                             redirectFile.createNewFile();
                         } catch (IOException e) {
-                            System.err.println(String.format("Couldn't create the file to redirect to: %s",
+                            Printer.print(System.err, String.format("Couldn't create the file to redirect to: %s",
                                     redirectFile.toString()));
                             continue;
                         }
                     }
                     redirects.put(RedirectType.fromString(redirectOperator), new File(redirectTo));
                 } else {
-                    System.err.println(String.format("No such file or directory: %s", redirectFile.toString()));
+                    Printer.print(System.err, String.format("No such file or directory: %s", redirectFile.toString()));
                 }
                 continue;
             }

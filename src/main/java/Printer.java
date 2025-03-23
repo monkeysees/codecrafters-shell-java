@@ -23,10 +23,9 @@ interface Printer {
                     PrintWriter writer = new PrintWriter(fw)) {
                 writer.println(data);
             } catch (FileNotFoundException e) {
-                System.err.println(String.format("No such file: %s", destination));
+                Printer.print(System.err, String.format("No such file: %s", destination));
             } catch (IOException e) {
-                System.err.println(
-                        String.format("Error writing to file %s: %s", destination, e.getMessage()));
+                Printer.print(System.err, String.format("Error writing to file %s: %s", destination, e.getMessage()));
             }
         }
     }

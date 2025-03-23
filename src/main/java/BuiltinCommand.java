@@ -23,12 +23,8 @@ public abstract class BuiltinCommand extends Program {
             super("exit", redirects);
         }
 
-        public ExecutionResult execute(Shell shell, List<String> args) {
-            if (args.get(0).equals("0")) {
-                shell.scanner.close();
-                System.exit(0);
-            }
-            return new ExecutionResult();
+        public ExecutionResult execute(Shell shell, List<String> args) throws ExitException {
+            throw new ExitException();
         }
     }
 
