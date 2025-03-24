@@ -125,26 +125,24 @@ public class Shell {
                             .distinct()
                             .sorted()
                             .toList();
-                    if (autocompleteOptions.size() == 0) {
-                        System.out.print(BELL_CHARACTER);
-                    } else if (autocompleteOptions.size() == 1) {
-                        String autocompletedProgramName = autocompleteOptions.getFirst();
-                        if (commandBeginning.length() < autocompletedProgramName.length()) {
-                            String autocompletedPortion = autocompletedProgramName.substring(commandBeginning.length())
-                                    + " ";
-                            input.append(autocompletedPortion);
-                            System.out.print(autocompletedPortion);
-                        } else {
-                            input.append(" ");
-                            System.out.print(" ");
+                    switch (autocompleteOptions.size()) {
+                        case 0 -> System.out.print(BELL_CHARACTER);
+                        case 1 -> {
+                            String autocompletedInput = autocompleteOptions.getFirst();
+                            String newInputPortion = autocompletedInput
+                                    .substring(commandBeginning.length())
+                                    .concat(" ");
+                            input.append(newInputPortion);
+                            System.out.print(newInputPortion);
                         }
-                    } else {
-                        if (consecutiveTabsCount == 1) {
-                            System.out.print(BELL_CHARACTER);
-                        } else {
-                            System.out.println();
-                            System.out.println(String.join(" " + " ", autocompleteOptions));
-                            System.out.print("$ " + input);
+                        default -> {
+                            if (consecutiveTabsCount == 1) {
+                                System.out.print(BELL_CHARACTER);
+                            } else {
+                                System.out.println();
+                                System.out.println(String.join(" " + " ", autocompleteOptions));
+                                System.out.print("$ " + input);
+                            }
                         }
                     }
                 } else {
