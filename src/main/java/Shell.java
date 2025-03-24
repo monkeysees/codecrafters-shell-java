@@ -136,12 +136,20 @@ public class Shell {
                             System.out.print(newInputPortion);
                         }
                         default -> {
-                            if (consecutiveTabsCount == 1) {
-                                System.out.print(BELL_CHARACTER);
+                            String autocompletedInput = findShortestCommonPrefix(autocompleteOptions,
+                                    commandBeginning);
+                            if (autocompletedInput.length() > commandBeginning.length()) {
+                                String newInputPortion = autocompletedInput.substring(commandBeginning.length());
+                                input.append(newInputPortion);
+                                System.out.print(newInputPortion);
                             } else {
-                                System.out.println();
-                                System.out.println(String.join(" " + " ", autocompleteOptions));
-                                System.out.print("$ " + input);
+                                if (consecutiveTabsCount == 1) {
+                                    System.out.print(BELL_CHARACTER);
+                                } else {
+                                    System.out.println();
+                                    System.out.println(String.join(" " + " ", autocompleteOptions));
+                                    System.out.print("$ " + input);
+                                }
                             }
                         }
                     }
@@ -251,5 +259,25 @@ public class Shell {
         if (!dir.isDirectory()) {
             throw new IllegalArgumentException("Not a directory");
         }
+    }
+
+    static private String findShortestCommonPrefix(List<String> coll, String basePrefix) {
+        String shortestEntry = coll.stream()
+                .sorted((s1, s2) -> Integer.compare(s1.length(), s2.length()))
+                .findFirst()
+                .orElse(null);
+
+        if (shortestEntry == null || shortestEntry.equals(basePrefix)) {
+            return basePrefix;
+        }
+
+        for (int prefixLen = shortestEntry.length(); prefixLen > basePrefix.length(); prefixLen--) {
+            String testPrefix = shortestEntry.substring(0, prefixLen);
+            if (coll.stream().allMatch(entry -> entry.startsWith(testPrefix))) {
+                return testPrefix;
+            }
+        }
+
+        return basePrefix;
     }
 }
