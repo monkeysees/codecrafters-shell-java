@@ -136,7 +136,7 @@ public class Shell {
                             System.out.print(newInputPortion);
                         }
                         default -> {
-                            String autocompletedInput = findShortestCommonPrefix(autocompleteOptions,
+                            String autocompletedInput = findLongestCommonPrefix(autocompleteOptions,
                                     commandBeginning);
                             if (autocompletedInput.length() > commandBeginning.length()) {
                                 String newInputPortion = autocompletedInput.substring(commandBeginning.length());
@@ -261,7 +261,7 @@ public class Shell {
         }
     }
 
-    static private String findShortestCommonPrefix(List<String> coll, String basePrefix) {
+    static private String findLongestCommonPrefix(List<String> coll, String basePrefix) {
         String shortestEntry = coll.stream()
                 .sorted((s1, s2) -> Integer.compare(s1.length(), s2.length()))
                 .findFirst()
