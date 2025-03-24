@@ -116,7 +116,10 @@ public class Shell {
                 Matcher commandBeginningMatcher = COMMAND_BEGINNING_PATTERN.matcher(input);
                 String commandBeginning = commandBeginningMatcher.find() ? commandBeginningMatcher.group(1) : null;
                 if (commandBeginning != null) {
-                    String autocompletedProgramName = BuiltinCommand.autocomplete(commandBeginning);
+                    String autoCompletedBuiltin = BuiltinCommand.autocomplete(commandBeginning);
+                    String autocompletedProgramName = autoCompletedBuiltin != null
+                            ? autoCompletedBuiltin
+                            : Executable.autocomplete(commandBeginning);
                     if (autocompletedProgramName != null) {
                         if (commandBeginning.length() < autocompletedProgramName.length()) {
                             String autocompletedPortion = autocompletedProgramName.substring(commandBeginning.length())
