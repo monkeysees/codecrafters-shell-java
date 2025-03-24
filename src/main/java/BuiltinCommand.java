@@ -125,11 +125,10 @@ public abstract class BuiltinCommand extends Program {
         return COMMANDS.contains(name);
     }
 
-    public static String autocomplete(String commandBeginning) {
+    public static List<String> autocomplete(String commandBeginning) {
         return COMMANDS.stream()
                 .filter(command -> command.startsWith(commandBeginning))
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 
     public void print(Redirect redirect, String data) {

@@ -99,14 +99,13 @@ public class Executable extends Program {
                 : ProcessBuilder.Redirect.to(redirect.file);
     }
 
-    public static String autocomplete(String commandBeginning) {
+    public static List<String> autocomplete(String commandBeginning) {
         return Arrays.stream(DIRS)
                 .map(dir -> new File(dir))
                 .flatMap(dirFile -> dirFile.listFiles() != null ? Arrays.stream(dirFile.listFiles()) : null)
                 .map(exec -> exec.getName())
                 .filter(execName -> execName.startsWith(commandBeginning))
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 
     public void print(Redirect redirect, String data) {

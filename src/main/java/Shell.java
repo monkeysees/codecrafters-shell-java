@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class Shell {
     File cwd;
@@ -86,6 +87,7 @@ public class Shell {
         ByteArrayOutputStream bout;
         int c;
         Boolean isEscaped = false;
+        Integer consecutiveTabsCount = 0;
 
         while (true) {
             bout = new ByteArrayOutputStream();
@@ -113,14 +115,20 @@ public class Shell {
 
             // tab autocomplete
             if (c == 9 && input.length() > 0) {
+                consecutiveTabsCount++;
                 Matcher commandBeginningMatcher = COMMAND_BEGINNING_PATTERN.matcher(input);
                 String commandBeginning = commandBeginningMatcher.find() ? commandBeginningMatcher.group(1) : null;
                 if (commandBeginning != null) {
-                    String autoCompletedBuiltin = BuiltinCommand.autocomplete(commandBeginning);
-                    String autocompletedProgramName = autoCompletedBuiltin != null
-                            ? autoCompletedBuiltin
-                            : Executable.autocomplete(commandBeginning);
-                    if (autocompletedProgramName != null) {
+                    List<String> autocompleteOptions = Stream
+                            .concat(BuiltinCommand.autocomplete(commandBeginning).stream(),
+                                    Executable.autocomplete(commandBeginning).stream())
+                            .distinct()
+                            .sorted()
+                            .toList();
+                    if (autocompleteOptions.size() == 0) {
+                        System.out.print(BELL_CHARACTER);
+                    } else if (autocompleteOptions.size() == 1) {
+                        String autocompletedProgramName = autocompleteOptions.getFirst();
                         if (commandBeginning.length() < autocompletedProgramName.length()) {
                             String autocompletedPortion = autocompletedProgramName.substring(commandBeginning.length())
                                     + " ";
@@ -131,7 +139,13 @@ public class Shell {
                             System.out.print(" ");
                         }
                     } else {
-                        System.out.print(BELL_CHARACTER);
+                        if (consecutiveTabsCount == 1) {
+                            System.out.print(BELL_CHARACTER);
+                        } else {
+                            System.out.println();
+                            System.out.println(String.join(" " + " ", autocompleteOptions));
+                            System.out.print("$ " + input);
+                        }
                     }
                 } else {
                     System.out.print(BELL_CHARACTER);
@@ -172,6 +186,10 @@ public class Shell {
                 isEscaped = !isEscaped;
             } else if (isEscaped) {
                 isEscaped = false;
+            }
+
+            if (c != 9 && consecutiveTabsCount > 0) {
+                consecutiveTabsCount = 0;
             }
         }
     }
