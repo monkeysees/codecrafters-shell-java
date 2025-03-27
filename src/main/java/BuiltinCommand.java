@@ -8,33 +8,27 @@ import java.util.Set;
 public abstract class BuiltinCommand extends Program {
     static Set<String> COMMANDS = new HashSet<>(Arrays.asList("exit", "echo", "pwd", "cd", "type"));
 
-    BuiltinCommand(String name) {
-        this(name, null);
-    }
-
     BuiltinCommand(String name, Map<RedirectType, File> redirects) {
         super(name, redirects);
     }
 
     static class Exit extends BuiltinCommand {
-        String name = "exit";
-
         Exit(Map<RedirectType, File> redirects) {
             super("exit", redirects);
         }
 
+        @Override
         public ExecutionResult execute(Shell shell, List<String> args) throws ExitException {
             throw new ExitException();
         }
     }
 
     static class Echo extends BuiltinCommand {
-        String name = "echo";
-
         Echo(Map<RedirectType, File> redirects) {
             super("echo", redirects);
         }
 
+        @Override
         public ExecutionResult execute(Shell shell, List<String> args) {
             print(getOutputRedirect(), String.join(" ", args));
             return new ExecutionResult();
@@ -42,12 +36,11 @@ public abstract class BuiltinCommand extends Program {
     }
 
     static class PWD extends BuiltinCommand {
-        String name = "pwd";
-
         PWD(Map<RedirectType, File> redirects) {
             super("pwd", redirects);
         }
 
+        @Override
         public ExecutionResult execute(Shell shell, List<String> args) {
             if (args.isEmpty()) {
                 print(getOutputRedirect(), shell.cwd.toString());
@@ -59,12 +52,11 @@ public abstract class BuiltinCommand extends Program {
     }
 
     static class CD extends BuiltinCommand {
-        String name = "cd";
-
         CD(Map<RedirectType, File> redirects) {
             super("cd", redirects);
         }
 
+        @Override
         public ExecutionResult execute(Shell shell, List<String> args) {
             if (args.size() > 1) {
                 return new ExecutionError("cd: Only one argument is allowed");
@@ -82,12 +74,11 @@ public abstract class BuiltinCommand extends Program {
     }
 
     static class Type extends BuiltinCommand {
-        String name = "type";
-
         Type(Map<RedirectType, File> redirects) {
             super("type", redirects);
         }
 
+        @Override
         public ExecutionResult execute(Shell shell, List<String> args) {
             for (String arg : args) {
                 if (isBuiltin(arg)) {
@@ -131,6 +122,7 @@ public abstract class BuiltinCommand extends Program {
                 .toList();
     }
 
+    @Override
     public void print(Redirect redirect, String data) {
         switch (redirect.type) {
             case OUTPUT -> {
@@ -164,6 +156,10 @@ public abstract class BuiltinCommand extends Program {
                     Printer.print(System.err, data);
                 }
             }
+
+            case INPUT -> throw new UnsupportedOperationException("Unimplemented case: " + redirect.type);
+            case INPUT_APPEND -> throw new UnsupportedOperationException("Unimplemented case: " + redirect.type);
+            default -> throw new IllegalArgumentException("Unexpected value: " + redirect.type);
         }
     }
 }

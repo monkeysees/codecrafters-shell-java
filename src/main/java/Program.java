@@ -11,14 +11,6 @@ abstract class Program implements Printer {
     public File errorRedirect;
     public File errorRedirectAppend;
 
-    Program(String name) {
-        this(name, null);
-    }
-
-    Program(Map<RedirectType, File> redirects) {
-        this(null, redirects);
-    }
-
     Program(String name, Map<RedirectType, File> redirects) {
         if (name != null) {
             this.name = name;

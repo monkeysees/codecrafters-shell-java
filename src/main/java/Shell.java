@@ -74,7 +74,7 @@ public class Shell {
             e.printStackTrace();
             isError = true;
         } finally {
-            if (stty != null && ttyConfig != null) {
+            if (ttyConfig != null) {
                 stty.execute(this, Arrays.asList(ttyConfig));
             }
         }

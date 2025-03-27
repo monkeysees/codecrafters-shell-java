@@ -12,15 +12,12 @@ public class Executable extends Program {
             : new String[] {};
     Boolean shouldReturnOutput = false;
 
-    Executable(String name) {
-        this(name, null);
-    }
-
     Executable(String name, Map<RedirectType, File> redirects) {
         super(name, redirects);
         ensureExecutableExists();
     }
 
+    @Override
     public ExecutionResult execute(Shell shell, List<String> args) {
         List<String> processArgs = new ArrayList<>();
         processArgs.add(this.name);
@@ -108,6 +105,7 @@ public class Executable extends Program {
                 .toList();
     }
 
+    @Override
     public void print(Redirect redirect, String data) {
         switch (redirect.type) {
             case OUTPUT -> {
@@ -141,6 +139,10 @@ public class Executable extends Program {
                     Printer.print(System.err, data);
                 }
             }
+
+            case INPUT -> throw new UnsupportedOperationException("Unimplemented case: " + redirect.type);
+            case INPUT_APPEND -> throw new UnsupportedOperationException("Unimplemented case: " + redirect.type);
+            default -> throw new IllegalArgumentException("Unexpected value: " + redirect.type);
         }
     }
 

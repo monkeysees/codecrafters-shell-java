@@ -106,7 +106,7 @@ public class Input {
             if (redirectOperator != null) {
                 skipIteratorWhitespace(it);
                 String redirectTo = parseArgFromIterator(it);
-                File redirectFile = new File(redirectTo.toString());
+                File redirectFile = new File(redirectTo);
                 File redirectParentFile = redirectFile.getParentFile();
                 if (redirectParentFile != null && redirectParentFile.exists()) {
                     if (!redirectFile.exists()) {
